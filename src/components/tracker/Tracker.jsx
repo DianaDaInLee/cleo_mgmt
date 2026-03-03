@@ -29,6 +29,7 @@ function defaultRow(name = '') {
 export default function Tracker() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
   const [newCountry, setNewCountry] = useState('')
   const [adding, setAdding] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
@@ -51,7 +52,8 @@ export default function Tracker() {
     return unsub
   }, [])
 
-  const handleAddCountry = async () => {
+  const handleAddCountry = async (e) => {
+    e.preventDefault()
     if (!newCountry.trim()) return
     setAdding(true)
     try {
@@ -60,6 +62,7 @@ export default function Tracker() {
         createdAt: Date.now(),
       })
       setNewCountry('')
+      setShowModal(false)
     } catch (err) {
       console.error(err)
     }
@@ -94,42 +97,12 @@ export default function Tracker() {
           <p className="text-sm text-gray-500 mt-0.5">Track data build progress per country</p>
         </div>
 
-        {/* Add Country */}
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={newCountry}
-            onChange={e => setNewCountry(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAddCountry()}
-            placeholder="Country name…"
-            className="input-field w-44"
-          />
-          <button
-            type="button"
-            onClick={handleAddCountry}
-            disabled={adding || !newCountry.trim()}
-            style={{
-              backgroundColor: (adding || !newCountry.trim()) ? '#374151' : '#4c6ef5',
-              color: (adding || !newCountry.trim()) ? '#6b7280' : '#ffffff',
-              cursor: (adding || !newCountry.trim()) ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-              fontWeight: '500',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              transition: 'background-color 0.2s',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {adding ? 'Adding…' : 'Add Country'}
-          </button>
-        </div>
+        <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-1.5 text-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Country
+        </button>
       </div>
 
       {/* Table */}
@@ -294,6 +267,37 @@ export default function Tracker() {
         <p className="text-xs text-gray-600">
           {rows.filter(r => completedCount(r) === TICK_COLUMNS.length).length} of {rows.length} countries fully complete
         </p>
+      )}
+
+      {/* Add Country Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+          <div className="card w-full max-w-sm">
+            <h3 className="text-base font-semibold text-white mb-4">Add Country</h3>
+            <form onSubmit={handleAddCountry} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Country name</label>
+                <input
+                  type="text"
+                  value={newCountry}
+                  onChange={e => setNewCountry(e.target.value)}
+                  className="input-field w-full"
+                  placeholder="e.g. United States"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" onClick={() => { setShowModal(false); setNewCountry('') }} className="btn-ghost">
+                  Cancel
+                </button>
+                <button type="submit" disabled={adding} className="btn-primary disabled:opacity-50">
+                  {adding ? 'Adding…' : 'Add Country'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )
