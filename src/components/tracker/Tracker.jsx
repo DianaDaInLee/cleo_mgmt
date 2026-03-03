@@ -9,12 +9,13 @@ const TICK_COLUMNS = [
   { key: 'election_summary',    label: 'Election Data Summary' },
   { key: 'candidate_race',      label: 'Candidate Race' },
   { key: 'candidate_gender',    label: 'Candidate Gender' },
-  { key: 'demo_race',           label: 'Demo: Race' },
-  { key: 'demo_gender',         label: 'Demo: Gender' },
-  { key: 'demo_religion',       label: 'Demo: Religion' },
-  { key: 'demo_education',      label: 'Demo: Education' },
-  { key: 'demo_income',         label: 'Demo: Income' },
-  { key: 'demo_summary',        label: 'Demo Summary' },
+  { key: 'demo_race',           label: 'DEM: Race' },
+  { key: 'demo_gender',         label: 'DEM: Gender' },
+  { key: 'demo_religion',       label: 'DEM: Religion' },
+  { key: 'demo_education',      label: 'DEM: Education' },
+  { key: 'demo_income',         label: 'DEM: Income' },
+  { key: 'demo_age',            label: 'DEM: Age' },
+  { key: 'demo_summary',        label: 'DEM Summary' },
   { key: 'shapefile',           label: 'Shapefile' },
   { key: 'merge',               label: 'Merge' },
 ]
@@ -50,8 +51,7 @@ export default function Tracker() {
     return unsub
   }, [])
 
-  const handleAddCountry = async (e) => {
-    e.preventDefault()
+  const handleAddCountry = async () => {
     if (!newCountry.trim()) return
     setAdding(true)
     try {
@@ -94,30 +94,42 @@ export default function Tracker() {
           <p className="text-sm text-gray-500 mt-0.5">Track data build progress per country</p>
         </div>
 
-        {/* Add Country form */}
-        <form onSubmit={handleAddCountry} className="flex items-center gap-2">
+        {/* Add Country */}
+        <div className="flex items-center gap-2">
           <input
             type="text"
             value={newCountry}
             onChange={e => setNewCountry(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAddCountry()}
             placeholder="Country name…"
             className="input-field w-44"
           />
           <button
-            type="submit"
+            type="button"
+            onClick={handleAddCountry}
             disabled={adding || !newCountry.trim()}
-            className={`flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors duration-200 ${
-              adding || !newCountry.trim()
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                : 'bg-primary-600 hover:bg-primary-700 text-white cursor-pointer'
-            }`}
+            style={{
+              backgroundColor: (adding || !newCountry.trim()) ? '#374151' : '#4c6ef5',
+              color: (adding || !newCountry.trim()) ? '#6b7280' : '#ffffff',
+              cursor: (adding || !newCountry.trim()) ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              transition: 'background-color 0.2s',
+              whiteSpace: 'nowrap',
+            }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             {adding ? 'Adding…' : 'Add Country'}
           </button>
-        </form>
+        </div>
       </div>
 
       {/* Table */}
