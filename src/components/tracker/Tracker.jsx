@@ -7,6 +7,8 @@ import {
 const TICK_COLUMNS = [
   { key: 'election_data',       label: 'Election Data' },
   { key: 'election_summary',    label: 'Election Data Summary' },
+  { key: 'candidate_race',      label: 'Candidate Race' },
+  { key: 'candidate_gender',    label: 'Candidate Gender' },
   { key: 'demo_race',           label: 'Demo: Race' },
   { key: 'demo_gender',         label: 'Demo: Gender' },
   { key: 'demo_religion',       label: 'Demo: Religion' },
@@ -28,14 +30,23 @@ export default function Tracker() {
   const [loading, setLoading] = useState(true)
   const [newCountry, setNewCountry] = useState('')
   const [adding, setAdding] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(null) // row id to confirm
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [firebaseError, setFirebaseError] = useState(null)
 
   useEffect(() => {
     const q = query(collection(db, 'tracker_rows'), orderBy('createdAt'))
-    const unsub = onSnapshot(q, (snap) => {
-      setRows(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-      setLoading(false)
-    })
+    const unsub = onSnapshot(q,
+      (snap) => {
+        setRows(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        setLoading(false)
+        setFirebaseError(null)
+      },
+      (err) => {
+        console.error(err)
+        setFirebaseError(err.message)
+        setLoading(false)
+      }
+    )
     return unsub
   }, [])
 
@@ -95,12 +106,16 @@ export default function Tracker() {
           <button
             type="submit"
             disabled={adding || !newCountry.trim()}
-            className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-50"
+            className={`flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors duration-200 ${
+              adding || !newCountry.trim()
+                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700 text-white cursor-pointer'
+            }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add Country
+            {adding ? 'Adding…' : 'Add Country'}
           </button>
         </form>
       </div>
@@ -136,7 +151,14 @@ export default function Tracker() {
                   </td>
                 </tr>
               )}
-              {!loading && rows.length === 0 && (
+              {firebaseError && (
+                <tr>
+                  <td colSpan={TICK_COLUMNS.length + 4} className="text-center text-red-400 py-10 text-sm px-4">
+                    Firebase error: {firebaseError}. Check your Firestore security rules.
+                  </td>
+                </tr>
+              )}
+              {!loading && !firebaseError && rows.length === 0 && (
                 <tr>
                   <td colSpan={TICK_COLUMNS.length + 4} className="text-center text-gray-600 py-10">
                     No countries yet. Add one above.
