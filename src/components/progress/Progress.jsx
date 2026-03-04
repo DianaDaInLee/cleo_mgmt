@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 const TICK_COLUMNS = [
   { key: 'election_data',    label: 'Election Data' },
+  { key: 'election_var',     label: 'Election Var' },
   { key: 'election_summary', label: 'Election Summary' },
   { key: 'candidate_race',   label: 'Candidate Race' },
   { key: 'candidate_gender', label: 'Candidate Gender' },
