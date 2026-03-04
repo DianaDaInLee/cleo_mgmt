@@ -1,5 +1,6 @@
 import Timeline from './Timeline'
 import Links from './Links'
+import DivisionOfLabor from './DivisionOfLabor'
 
 export default function Dashboard() {
   return (
@@ -10,6 +11,7 @@ export default function Dashboard() {
       </div>
       <Timeline />
       <Links />
+      <DivisionOfLabor />
     </div>
   )
 }
