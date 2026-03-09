@@ -15,6 +15,26 @@ const PRIORITY_STYLES = {
   'Low':    'bg-emerald-900/60 text-emerald-300',
 }
 
+function computeProgress(subtasks) {
+  if (!subtasks || subtasks.length === 0) return null
+  return Math.round(subtasks.filter(s => s.completed).length / subtasks.length * 100)
+}
+
+function ProgressBar({ progress }) {
+  if (progress === null) return <span className="text-xs text-gray-600">—</span>
+  return (
+    <div className="flex items-center gap-2 min-w-[80px]">
+      <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-primary-500 rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <span className="text-xs text-gray-400 w-7 text-right shrink-0">{progress}%</span>
+    </div>
+  )
+}
+
 export default function TasksList({ onNavigateToTasks }) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -63,35 +83,46 @@ export default function TasksList({ onNavigateToTasks }) {
             <thead>
               <tr className="bg-gray-800/60 border-b border-gray-700">
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Task</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-32">Assignee</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-28">Due</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-28">Assignee</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-24">Due</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-24">Priority</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-28">Status</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-36">Progress</th>
               </tr>
             </thead>
             <tbody>
-              {tasks.map((t) => (
-                <tr key={t.id} className="border-b border-gray-800 last:border-b-0 hover:bg-gray-800/20 transition-colors">
-                  <td className="px-4 py-2.5">
-                    <div className="font-medium text-gray-200">{t.name}</div>
-                    {t.notes && <div className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{t.notes}</div>}
-                  </td>
-                  <td className="px-4 py-2.5 text-gray-400">{t.assignee || '—'}</td>
-                  <td className={`px-4 py-2.5 text-sm font-medium ${isOverdue(t) ? 'text-red-400' : 'text-gray-400'}`}>
-                    {formatDate(t.dueDate)}{isOverdue(t) && ' ⚠'}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_STYLES[t.priority] || 'bg-gray-700 text-gray-300'}`}>
-                      {t.priority || '—'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${STATUS_STYLES[t.status] || 'bg-gray-700 text-gray-300'}`}>
-                      {t.status || '—'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {tasks.map((t) => {
+                const progress = computeProgress(t.subtasks)
+                return (
+                  <tr key={t.id} className="border-b border-gray-800 last:border-b-0 hover:bg-gray-800/20 transition-colors">
+                    <td className="px-4 py-2.5">
+                      <div className="font-medium text-gray-200">{t.name}</div>
+                      {(t.subtasks || []).length > 0 && (
+                        <div className="text-xs text-gray-600 mt-0.5">
+                          {(t.subtasks || []).filter(s => s.completed).length}/{(t.subtasks || []).length} subtasks
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-400">{t.assignee || '—'}</td>
+                    <td className={`px-4 py-2.5 text-sm font-medium ${isOverdue(t) ? 'text-red-400' : 'text-gray-400'}`}>
+                      {formatDate(t.dueDate)}{isOverdue(t) && ' ⚠'}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_STYLES[t.priority] || 'bg-gray-700 text-gray-300'}`}>
+                        {t.priority || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${STATUS_STYLES[t.status] || 'bg-gray-700 text-gray-300'}`}>
+                        {t.status || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <ProgressBar progress={progress} />
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
