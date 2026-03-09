@@ -4,15 +4,7 @@ import {
   collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, query, orderBy
 } from 'firebase/firestore'
 
-const STATUSES = ['Not Started', 'In Progress', 'Completed', 'Blocked']
 const PRIORITIES = ['High', 'Medium', 'Low']
-
-const STATUS_STYLES = {
-  'Not Started': 'bg-gray-700 text-gray-300',
-  'In Progress': 'bg-amber-900/60 text-amber-300',
-  'Completed':   'bg-emerald-900/60 text-emerald-300',
-  'Blocked':     'bg-red-900/60 text-red-300',
-}
 
 const PRIORITY_STYLES = {
   'High':   'bg-red-900/60 text-red-300',
@@ -20,7 +12,7 @@ const PRIORITY_STYLES = {
   'Low':    'bg-emerald-900/60 text-emerald-300',
 }
 
-const EMPTY_TASK = { name: '', assignee: '', dueDate: '', priority: 'Medium', status: 'Not Started', notes: '' }
+const EMPTY_TASK = { name: '', assignee: '', dueDate: '', priority: 'Medium', notes: '' }
 
 function computeProgress(subtasks) {
   if (!subtasks || subtasks.length === 0) return null
@@ -42,17 +34,23 @@ function ProgressBar({ progress }) {
   )
 }
 
+function makeId() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+}
+
 export default function Tasks() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [newTask, setNewTask] = useState(EMPTY_TASK)
+  const [newSubtasks, setNewSubtasks] = useState([])       // subtasks staged in modal
+  const [newSubtaskInput, setNewSubtaskInput] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editValues, setEditValues] = useState(EMPTY_TASK)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
-  const [subtaskInputs, setSubtaskInputs] = useState({}) // { taskId: string }
+  const [subtaskInputs, setSubtaskInputs] = useState({})   // { taskId: string }
 
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('createdAt'))
@@ -63,24 +61,41 @@ export default function Tasks() {
     return unsub
   }, [])
 
+  // ── Modal subtask helpers ──────────────────────────────────────
+  const addSubtaskToModal = () => {
+    const name = newSubtaskInput.trim()
+    if (!name) return
+    setNewSubtasks(v => [...v, { id: makeId(), name }])
+    setNewSubtaskInput('')
+  }
+
+  const removeSubtaskFromModal = (id) => setNewSubtasks(v => v.filter(s => s.id !== id))
+
+  const closeModal = () => {
+    setShowModal(false)
+    setNewTask(EMPTY_TASK)
+    setNewSubtasks([])
+    setNewSubtaskInput('')
+  }
+
+  // ── CRUD ──────────────────────────────────────────────────────
   const handleAdd = async (e) => {
     e.preventDefault()
     if (!newTask.name.trim()) return
     setSaving(true)
+    const subtasks = newSubtasks.map(s => ({ ...s, completed: false }))
     try {
       await addDoc(collection(db, 'tasks'), {
         name:      newTask.name.trim(),
         assignee:  newTask.assignee.trim(),
         dueDate:   newTask.dueDate,
         priority:  newTask.priority,
-        status:    newTask.status,
         notes:     newTask.notes.trim(),
-        subtasks:  [],
-        progress:  null,
+        subtasks,
+        progress:  computeProgress(subtasks),
         createdAt: Date.now(),
       })
-      setNewTask(EMPTY_TASK)
-      setShowModal(false)
+      closeModal()
     } catch (err) {
       console.error(err)
     }
@@ -94,7 +109,6 @@ export default function Tasks() {
       assignee: t.assignee || '',
       dueDate:  t.dueDate || '',
       priority: t.priority || 'Medium',
-      status:   t.status || 'Not Started',
       notes:    t.notes || '',
     })
   }
@@ -107,7 +121,6 @@ export default function Tasks() {
         assignee: editValues.assignee.trim(),
         dueDate:  editValues.dueDate,
         priority: editValues.priority,
-        status:   editValues.status,
         notes:    editValues.notes.trim(),
       })
     } catch (err) {
@@ -122,7 +135,7 @@ export default function Tasks() {
     if (expandedId === id) setExpandedId(null)
   }
 
-  // Subtask helpers
+  // ── Subtask helpers (existing tasks) ──────────────────────────
   const toggleSubtask = async (task, subtaskId) => {
     const updated = (task.subtasks || []).map(s =>
       s.id === subtaskId ? { ...s, completed: !s.completed } : s
@@ -136,7 +149,7 @@ export default function Tasks() {
   const addSubtask = async (task) => {
     const name = (subtaskInputs[task.id] || '').trim()
     if (!name) return
-    const updated = [...(task.subtasks || []), { id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name, completed: false }]
+    const updated = [...(task.subtasks || []), { id: makeId(), name, completed: false }]
     await updateDoc(doc(db, 'tasks', task.id), {
       subtasks: updated,
       progress: computeProgress(updated),
@@ -158,10 +171,7 @@ export default function Tasks() {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
-  const isOverdue = (t) => {
-    if (!t.dueDate || t.status === 'Completed') return false
-    return t.dueDate < new Date().toISOString().slice(0, 10)
-  }
+  const isOverdue = (t) => t.dueDate && t.dueDate < new Date().toISOString().slice(0, 10)
 
   const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id)
 
@@ -197,7 +207,6 @@ export default function Tasks() {
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-32">Assignee</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-32">Due Date</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-24">Priority</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-28">Status</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-36">Progress</th>
                   <th className="px-4 py-2.5 w-20" />
                 </tr>
@@ -211,7 +220,6 @@ export default function Tasks() {
 
                   return (
                     <>
-                      {/* Main task row */}
                       <tr
                         key={t.id}
                         className={`border-b border-gray-800 transition-colors ${isExpanded ? 'bg-gray-800/30' : 'hover:bg-gray-800/20'}`}
@@ -257,13 +265,6 @@ export default function Tasks() {
                               </select>
                             </td>
                             <td className="px-4 py-2">
-                              <select value={editValues.status}
-                                onChange={e => setEditValues(v => ({ ...v, status: e.target.value }))}
-                                className="input-field w-full">
-                                {STATUSES.map(s => <option key={s}>{s}</option>)}
-                              </select>
-                            </td>
-                            <td className="px-4 py-2">
                               <ProgressBar progress={progress} />
                             </td>
                             <td className="px-4 py-2">
@@ -289,11 +290,6 @@ export default function Tasks() {
                             <td className="px-4 py-2.5">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_STYLES[t.priority] || 'bg-gray-700 text-gray-300'}`}>
                                 {t.priority || '—'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${STATUS_STYLES[t.status] || 'bg-gray-700 text-gray-300'}`}>
-                                {t.status || '—'}
                               </span>
                             </td>
                             <td className="px-4 py-2.5">
@@ -332,7 +328,7 @@ export default function Tasks() {
                       {/* Subtask expanded row */}
                       {isExpanded && (
                         <tr key={`${t.id}-subtasks`} className="border-b border-gray-800 bg-gray-900/60">
-                          <td colSpan={8} className="px-10 py-3">
+                          <td colSpan={7} className="px-10 py-3">
                             <div className="space-y-1.5">
                               {subtasks.length === 0 ? (
                                 <p className="text-xs text-gray-600 py-1">No subtasks yet. Add one below.</p>
@@ -360,8 +356,6 @@ export default function Tasks() {
                                   </div>
                                 ))
                               )}
-
-                              {/* Add subtask input */}
                               <div className="flex items-center gap-2 pt-1.5">
                                 <input
                                   type="text"
@@ -394,7 +388,7 @@ export default function Tasks() {
       {/* Add Task Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-          <div className="card w-full max-w-lg">
+          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-semibold text-white mb-4">Add Task</h3>
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
@@ -440,28 +434,57 @@ export default function Tasks() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Status</label>
-                  <select value={newTask.status}
-                    onChange={e => setNewTask(v => ({ ...v, status: e.target.value }))}
-                    className="input-field w-full">
-                    {STATUSES.map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  <label className="block text-sm text-gray-400 mb-1">Notes</label>
+                  <input
+                    type="text"
+                    value={newTask.notes}
+                    onChange={e => setNewTask(v => ({ ...v, notes: e.target.value }))}
+                    className="input-field w-full"
+                    placeholder="Optional notes…"
+                  />
                 </div>
               </div>
+
+              {/* Subtasks in modal */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Notes</label>
-                <input
-                  type="text"
-                  value={newTask.notes}
-                  onChange={e => setNewTask(v => ({ ...v, notes: e.target.value }))}
-                  className="input-field w-full"
-                  placeholder="Optional notes…"
-                />
+                <label className="block text-sm text-gray-400 mb-2">Subtasks</label>
+                <div className="space-y-1.5 mb-2">
+                  {newSubtasks.map(s => (
+                    <div key={s.id} className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1.5">
+                      <span className="flex-1 text-sm text-gray-300">{s.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeSubtaskFromModal(s.id)}
+                        className="text-gray-600 hover:text-red-400 transition-colors shrink-0"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSubtaskInput}
+                    onChange={e => setNewSubtaskInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtaskToModal() } }}
+                    placeholder="Add a subtask…"
+                    className="input-field flex-1 py-1.5 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={addSubtaskToModal}
+                    className="text-sm font-medium text-primary-400 hover:text-primary-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-800"
+                  >
+                    + Add
+                  </button>
+                </div>
               </div>
+
               <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={() => { setShowModal(false); setNewTask(EMPTY_TASK) }} className="btn-ghost">
-                  Cancel
-                </button>
+                <button type="button" onClick={closeModal} className="btn-ghost">Cancel</button>
                 <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
                   {saving ? 'Saving…' : 'Add Task'}
                 </button>

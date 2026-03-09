@@ -2,13 +2,6 @@ import { useState, useEffect } from 'react'
 import { db } from '../../firebase/config'
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore'
 
-const STATUS_STYLES = {
-  'Not Started': 'bg-gray-700 text-gray-300',
-  'In Progress': 'bg-amber-900/60 text-amber-300',
-  'Completed':   'bg-emerald-900/60 text-emerald-300',
-  'Blocked':     'bg-red-900/60 text-red-300',
-}
-
 const PRIORITY_STYLES = {
   'High':   'bg-red-900/60 text-red-300',
   'Medium': 'bg-amber-900/60 text-amber-300',
@@ -86,7 +79,6 @@ export default function TasksList({ onNavigateToTasks }) {
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-28">Assignee</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-24">Due</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-24">Priority</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-28">Status</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-36">Progress</th>
               </tr>
             </thead>
@@ -110,11 +102,6 @@ export default function TasksList({ onNavigateToTasks }) {
                     <td className="px-4 py-2.5">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_STYLES[t.priority] || 'bg-gray-700 text-gray-300'}`}>
                         {t.priority || '—'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${STATUS_STYLES[t.status] || 'bg-gray-700 text-gray-300'}`}>
-                        {t.status || '—'}
                       </span>
                     </td>
                     <td className="px-4 py-2.5">
