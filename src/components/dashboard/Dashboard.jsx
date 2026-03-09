@@ -1,8 +1,8 @@
 import Timeline from './Timeline'
 import Links from './Links'
-import DivisionOfLabor from './DivisionOfLabor'
+import TasksList from './TasksList'
 
-export default function Dashboard() {
+export default function Dashboard({ setActiveTab }) {
   return (
     <div className="space-y-6">
       <div>
@@ -11,7 +11,7 @@ export default function Dashboard() {
       </div>
       <Timeline />
       <Links />
-      <DivisionOfLabor />
+      <TasksList onNavigateToTasks={() => setActiveTab('tasks')} />
     </div>
   )
 }
